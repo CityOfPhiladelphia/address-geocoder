@@ -51,3 +51,5 @@ addresses using the following steps:
 
 1. Standardizes addresses using `passyunk`, Philadelphia's address
 standardization system.
+2. Loads the standardized data into databridge, where latitude and longitude
+data are appended
