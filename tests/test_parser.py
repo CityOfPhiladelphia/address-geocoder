@@ -56,21 +56,33 @@ def test_raises_when_both_null(tmp_path):
         generate_field_list(cfg_path)
 
 def test_parse_real_address():
-    addr, is_addr, is_philly_addr = parse('123 mkt')
+    parsed = parse('123 mkt')
+
+    addr = parsed['output_address']
+    is_addr = parsed['is_addr']
+    is_philly_addr = parsed['is_philly_addr']
 
     assert addr == '123 MARKET ST'
     assert is_addr == True
     assert is_philly_addr == True
 
 def test_parse_non_philly_address():
-    addr, is_addr, is_philly_addr = parse('123 fake st')
+    parsed = parse('123 fake st')
+
+    addr = parsed['output_address']
+    is_addr = parsed['is_addr']
+    is_philly_addr = parsed['is_philly_addr']
 
     assert addr == '123 FAKE ST'
     assert is_addr == True
     assert is_philly_addr == False
 
 def test_parse_non_address():
-    addr, is_addr, is_philly_addr = parse('not an address')
+    parsed = parse('not an address')
+
+    addr = parsed['output_address']
+    is_addr = parsed['is_addr']
+    is_philly_addr = parsed['is_philly_addr']
 
     assert addr == 'NOT AN ADDRESS'
     assert is_addr == False
