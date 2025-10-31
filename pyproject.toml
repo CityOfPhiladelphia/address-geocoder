@@ -7,6 +7,7 @@ requires-python = ">=3.9"
 dependencies = [
     "adbc-driver-manager>=1.8.0",
     "adbc-driver-postgresql>=1.8.0",
+    "black>=25.9.0",
     "ipython>=8.18.1",
     "pandas>=2.2",
     "passyunk",
