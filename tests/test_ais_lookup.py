@@ -1,4 +1,5 @@
-import pytest, requests, utils.ais_lookup as ais_lookup, polars as pl
+import utils.ais_lookup as ais_lookup
+
 
 def test_ais_lookup_creates_address_search_url(monkeypatch):
     created = {}
@@ -39,11 +40,17 @@ def test_ais_lookup_creates_address_search_url(monkeypatch):
     monkeypatch.setattr(FakeSession, "get", fake_get)
     sess = FakeSession()
 
-    result = ais_lookup.ais_lookup(sess, "1234", "1234 mkt st")
+    result = ais_lookup.ais_lookup(sess, "1234", "1234 mkt st", [])
 
     assert created["url"] == "https://api.phila.gov/ais/v1/search/1234 mkt st"
     assert created["params"] == {"gatekeeperKey": "1234"}
-    assert result == ("1234 MARKET ST", True, True, 39.95, -75.16)
+    assert result == {
+        "geocode_lat": "39.95",
+        "geocode_lon": "-75.16",
+        "is_addr": True,
+        "is_philly_addr": True,
+        "output_address": "1234 MARKET ST",
+    }
 
 
 def test_false_address_returns_none_if_bad_address(monkeypatch):
@@ -74,31 +81,12 @@ def test_false_address_returns_none_if_bad_address(monkeypatch):
     monkeypatch.setattr(FakeSession, "get", fake_get)
     sess = FakeSession()
 
-    result = ais_lookup.ais_lookup(sess, "1234", "1234 fake st")
+    result = ais_lookup.ais_lookup(sess, "1234", "1234 fake st", [])
 
-    assert result == (None, False, False, None, None)
-
-
-def stream_null_geos_batches_correctly():
-
-    df = pl.DataFrame(
-        {"id": [1, 2, 3, 4], "street": ["1234 MARKET ST", None, None, "123 FAKE ST"]}
-    )
-    lf = df.lazy()
-
-    count = 0
-
-    for batch in ais_lookup.stream_null_geos(lf, 1):
-        count += 1
-
-    assert count == 2
-
-
-def test_ais_append_raises_value_error_on_bad_dataframe():
-
-    df = pl.DataFrame({"id": [1, 2], "street": ["1234 MARKET ST", "123 FAKE ST"]})
-    lf = df.lazy()
-    sess = requests.Session()
-
-    with pytest.raises(ValueError):
-        ais_lookup.ais_append(sess, "123", lf)
+    assert result == {
+        "geocode_lat": None,
+        "geocode_lon": None,
+        "is_addr": False,
+        "is_philly_addr": False,
+        "output_address": "",
+    }

@@ -1,7 +1,7 @@
 import pytest, yaml
 from passyunk.parser import PassyunkParser
 from functools import partial
-from utils.parse_address import parse_address, generate_field_list, combine_fields
+from utils.parse_address import parse_address, combine_fields, find_address_fields
 
 p = PassyunkParser()
 parse = partial(parse_address, p)
@@ -22,7 +22,7 @@ def test_uses_full_address_when_present(tmp_path):
         },
     )
 
-    assert generate_field_list(cfg_path) == ["street_address"]
+    assert find_address_fields(cfg_path) == ["street_address"]
 
 
 def test_falls_back_to_component_fields(tmp_path):
@@ -34,7 +34,7 @@ def test_falls_back_to_component_fields(tmp_path):
         },
     )
 
-    assert generate_field_list(cfg_path) == ["addr_st", "addr_city"]
+    assert find_address_fields(cfg_path) == ["addr_st", "addr_city"]
 
 
 def test_raises_if_street_missing(tmp_path):
@@ -47,7 +47,7 @@ def test_raises_if_street_missing(tmp_path):
     )
 
     with pytest.raises(ValueError, match="street"):
-        generate_field_list(cfg_path)
+        find_address_fields(cfg_path)
 
 
 def test_raises_if_street_null(tmp_path):
@@ -60,7 +60,7 @@ def test_raises_if_street_null(tmp_path):
     )
 
     with pytest.raises(ValueError, match="street"):
-        generate_field_list(cfg_path)
+        find_address_fields(cfg_path)
 
 
 def test_raises_when_both_null(tmp_path):
@@ -69,7 +69,7 @@ def test_raises_when_both_null(tmp_path):
     )
 
     with pytest.raises(ValueError, match="street"):
-        generate_field_list(cfg_path)
+        find_address_fields(cfg_path)
 
 
 def test_parse_real_address():
