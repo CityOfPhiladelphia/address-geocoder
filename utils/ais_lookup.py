@@ -1,10 +1,8 @@
-import requests, polars as pl
+import requests, polars as pl, time
 from retrying import retry
 
 # Code adapted from Alex Waldman and Roland MacDavid
 # https://github.com/CityOfPhiladelphia/databridge-etl-tools/blob/master/databridge_etl_tools/ais_geocoder/ais_request.py
-
-
 @retry(wait_exponential_multiplier=1000, wait_exponential_max=10000, stop_max_attempt_number=5)
 def ais_lookup(
     sess: requests.Session, api_key: str, address: str, append_fields: list
@@ -22,7 +20,7 @@ def ais_lookup(
     Returns:
         The standardized address
     """
-
+    time.sleep(0.1) # Limit requests to 10 per second, per AIS limits
     ais_url = "https://api.phila.gov/ais/v1/search/" + address
     params = {}
     params["gatekeeperKey"] = api_key
@@ -66,7 +64,6 @@ def ais_lookup(
         out_data[field] = None
 
     return out_data
-
 
 def split_geos(data: pl.LazyFrame):
     """
