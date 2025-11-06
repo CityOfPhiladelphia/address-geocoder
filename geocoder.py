@@ -15,14 +15,14 @@ def get_current_time():
 def parse_with_passyunk_parser(lf: pl.LazyFrame) -> pl.LazyFrame:
     """
     Given a polars LazyFrame, parses addresses in that LazyFrame
-    using passyunk parser, and appends output address.
+    using passyunk parser, and adds output address.
 
     Args:
         lf: The polars lazyframe with an address field to parse
 
     Returns:
         A polars lazyframe with output address, and address validity booleans
-        appended.
+        added.
     """
     p = PassyunkParser()
 
@@ -44,10 +44,10 @@ def parse_with_passyunk_parser(lf: pl.LazyFrame) -> pl.LazyFrame:
     return lf
 
 
-def build_append_fields(config: dict) -> tuple[list, list]:
+def build_enrichment_fields(config: dict) -> tuple[list, list]:
     """
     Given a config dictionary, returns two lists of fields to be
-    appended to the input file. One list is the address file fieldnames,
+    added to the input file. One list is the address file fieldnames,
     the other is the AIS fieldnames.
 
     Args:
@@ -55,32 +55,32 @@ def build_append_fields(config: dict) -> tuple[list, list]:
 
     Returns: A tuple with AIS fieldnames and address file fieldnames.
     """
-    ais_append_fields = config["append_fields"]
+    ais_enrichment_fields = config["enrichment_fields"]
 
-    invalid_fields = [item for item in ais_append_fields if item not in fields.keys()]
+    invalid_fields = [item for item in ais_enrichment_fields if item not in fields.keys()]
 
     if invalid_fields:
         to_print = ", ".join(field for field in invalid_fields)
         raise ValueError(
-            "The following fields are not available for append:"
+            "The following fields are not available:"
             f"{to_print}. Please correct these and try again."
         )
 
     address_file_fields = []
 
-    [address_file_fields.append(fields[item]) for item in ais_append_fields]
+    [address_file_fields.append(fields[item]) for item in ais_enrichment_fields]
 
     # Need street_address for joining
     address_file_fields.extend(["street_address", "geocode_lat", "geocode_lon"])
 
-    return (ais_append_fields, address_file_fields)
+    return (ais_enrichment_fields, address_file_fields)
 
 
-def append_address_file_fields(
+def add_address_file_fields(
     geo_filepath: str, input_data: pl.LazyFrame, address_fields: list
 ) -> pl.LazyFrame:
     """
-    Given a list of address fields to append, appends those fields from
+    Given a list of address fields to add, adds those fields from
     the address file to each record in the input data. Does so via a
     left join on the full address.
     """
@@ -102,7 +102,7 @@ def split_geos(data: pl.LazyFrame):
     """
     Splits a lazyframe into two lazy frames: one for records with latitude
     and longitude, and another for records without latitude and longitude.
-    Used to determine which records need to be appended using AIS.
+    Used to determine which records need to be added using AIS.
     """
     has_geo = data.filter(
         (~pl.col("geocode_lat").is_null()) & (~pl.col("geocode_lon").is_null())
@@ -114,19 +114,19 @@ def split_geos(data: pl.LazyFrame):
     return (has_geo, needs_geo)
 
 
-def append_with_ais(
-    config: dict, to_append: pl.LazyFrame, append_fields: list
+def enrich_with_ais(
+    config: dict, to_add: pl.LazyFrame, enrichment_fields: list
 ) -> pl.LazyFrame:
     """
-    Appends user-specified fields to a polars lazyframe from AIS.
+    Adds user-specified fields to a polars lazyframe from AIS.
 
     Args:
         config: A user config dict
-        to_append: A polars lazyframe to be appended to
-        append_fields: A list of append fields specified by the user
+        to_add: A polars lazyframe to be enriched
+        enrichment_fields: A list of enrichment fields specified by the user
 
     Returns:
-        An appended polars lazyframe
+        An enriched polars lazyframe
     """
 
     new_cols = pl.Struct(
@@ -136,7 +136,7 @@ def append_with_ais(
             pl.Field("is_philly_addr", pl.Boolean),
             pl.Field("geocode_lat", pl.String),
             pl.Field("geocode_lon", pl.String),
-            *[pl.Field(field, pl.String) for field in append_fields],
+            *[pl.Field(field, pl.String) for field in enrichment_fields],
         ]
     )
 
@@ -145,11 +145,11 @@ def append_with_ais(
     field_names = [f.name for f in new_cols.fields]
 
     with requests.Session() as sess:
-        appended = (
-            to_append.with_columns(
+        added = (
+            to_add.with_columns(
                 pl.col("output_address")
                 .map_elements(
-                    lambda a: throttle_ais_lookup(sess, API_KEY, a, append_fields),
+                    lambda a: throttle_ais_lookup(sess, API_KEY, a, enrichment_fields),
                     return_dtype=new_cols,
                 )
                 .alias("temp_struct")
@@ -160,7 +160,7 @@ def append_with_ais(
             .drop("temp_struct")
         )
 
-    return appended
+    return added
 
 
 @click.command()
@@ -216,25 +216,25 @@ def process_csv(config_path) -> pl.LazyFrame:
 
     lf = parse_with_passyunk_parser(lf)
 
-    # Generate the names of columns to append for both the AIS API
+    # Generate the names of columns to add for both the AIS API
     # and the address file
-    ais_append_fields, address_file_append_fields = build_append_fields(config)
+    ais_enrichment_fields, address_file_enrichment_fields = build_enrichment_fields(config)
 
-    joined_lf = append_address_file_fields(geo_filepath, lf, address_file_append_fields)
+    joined_lf = add_address_file_fields(geo_filepath, lf, address_file_enrichment_fields)
 
     # Split out fields that did not match the address file
     # and attempt to match them with the AIS API
 
-    # -------------------------- Append Fields from AIS ------------------ #
+    # -------------------------- Add Fields from AIS ------------------ #
     current_time = get_current_time()
-    print(f"Appending fields from AIS at {get_current_time()}")
+    print(f"Adding fields from AIS at {get_current_time()}")
 
     has_geo, needs_geo = split_geos(joined_lf)
 
-    ais_appended = append_with_ais(config, needs_geo, ais_append_fields)
+    ais_enriched = enrich_with_ais(config, needs_geo, ais_enrichment_fields)
 
     rejoined = (
-        pl.concat([has_geo, ais_appended])
+        pl.concat([has_geo, ais_enriched])
         .sort("__geocode_idx__")
         .drop(["__geocode_idx__", "joined_address"])
     )
@@ -244,14 +244,14 @@ def process_csv(config_path) -> pl.LazyFrame:
     # If filepath has multiple suffixes, remove them
     stem = in_path.name.replace("".join(in_path.suffixes), "")
 
-    out_path = f"{stem}_appended.csv"
+    out_path = f"{stem}_enriched.csv"
 
     out_path = str(in_path.parent / out_path)
 
     rejoined.sink_csv(out_path)
 
     current_time = get_current_time()
-    print(f"Append complete at {current_time}.")
+    print(f"Enrichment complete at {current_time}.")
 
 
 if __name__ == "__main__":

@@ -15,8 +15,8 @@ address_fields:
   state:
   zip:
 
-# Output Appended Fields
-append_fields:
+# Enrichment Fields -- Aside from coordinates, what fields to add
+enrichment_fields:
   - census_tract_2020
   - census_block_group_2020
   - census_block_2020

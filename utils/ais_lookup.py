@@ -41,7 +41,7 @@ limiter = RateLimiter(10)
     stop_max_attempt_number=5,
 )
 def ais_lookup(
-    sess: requests.Session, api_key: str, address: str, append_fields: list
+    sess: requests.Session, api_key: str, address: str, enrichment_fields: list
 ) -> dict:
     """
     Given a passyunk-normalized address, looks up whether or not it is in the
@@ -51,11 +51,11 @@ def ais_lookup(
         sess (requests Session object): A requests library session object
         api_key (str): An AIS api key
         address (str): The address to query
-        append_fields (list): The fields to append from AIS
+        enrichment_fields (list): The fields to add from AIS
 
     Returns:
         A dict with standardized address, latitude and longitude,
-        and user-requested appended fields.
+        and user-requested fields.
     """
     ais_url = "https://api.phila.gov/ais/v1/search/" + address
     params = {}
@@ -85,7 +85,7 @@ def ais_lookup(
         out_data["geocode_lat"] = str(lat)
         out_data["geocode_lon"] = str(lon)
 
-        for field in append_fields:
+        for field in enrichment_fields:
             out_data[field] = r_json.get("properties", "").get(field, "")
 
         return out_data
@@ -96,17 +96,17 @@ def ais_lookup(
     out_data["geocode_lat"] = None
     out_data["geocode_lon"] = None
 
-    for field in append_fields:
+    for field in enrichment_fields:
         out_data[field] = None
 
     return out_data
 
 
 def throttle_ais_lookup(
-    sess: requests.Session, api_key: str, address: str, append_fields: list
+    sess: requests.Session, api_key: str, address: str, enrichment_fields: list
 ) -> dict:
     """
     Helper function to throttle the number of API requests to 10 per second.
     """
     limiter.wait()
-    return ais_lookup(sess, api_key, address, append_fields)
+    return ais_lookup(sess, api_key, address, enrichment_fields)
