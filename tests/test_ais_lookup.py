@@ -1,5 +1,6 @@
 import utils.ais_lookup as ais_lookup
 
+
 def test_ais_lookup_creates_address_search_url(monkeypatch):
     created = {}
 

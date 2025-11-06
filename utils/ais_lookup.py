@@ -1,18 +1,20 @@
 import requests, polars as pl, time
 from retrying import retry
 
+
 class RateLimiter:
     """
     A class to handle rate limiting of an API. Faster than
     calling time.sleep() because it takes into account response
     lag from the API.
-    
+
     Example usage:
     limiter = RateLimiter(10)
 
     limiter.wait()
     (api call)
     """
+
     def __init__(self, rps: int):
         self.rate = 1.0 / rps
         self._last_time = 0.0
@@ -108,19 +110,3 @@ def throttle_ais_lookup(
     """
     limiter.wait()
     return ais_lookup(sess, api_key, address, append_fields)
-
-
-def split_geos(data: pl.LazyFrame):
-    """
-    Splits a lazyframe into two lazy frames: one for records with latitude
-    and longitude, and another for records without latitude and longitude.
-    Used to determine which records need to be appended using AIS.
-    """
-    has_geo = data.filter(
-        (~pl.col("geocode_lat").is_null()) & (~pl.col("geocode_lon").is_null())
-    )
-    needs_geo = data.filter(
-        (pl.col("geocode_lat").is_null()) | (pl.col("geocode_lon").is_null())
-    )
-
-    return (has_geo, needs_geo)

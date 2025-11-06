@@ -1,7 +1,7 @@
 import yaml, polars as pl, requests, click
 from datetime import datetime
 from utils.parse_address import find_address_fields, parse_address
-from utils.ais_lookup import split_geos, throttle_ais_lookup
+from utils.ais_lookup import throttle_ais_lookup
 from mapping.ais_properties_fields import fields
 from passyunk.parser import PassyunkParser
 from pathlib import PurePath
@@ -98,6 +98,22 @@ def append_address_file_fields(
     return joined_lf
 
 
+def split_geos(data: pl.LazyFrame):
+    """
+    Splits a lazyframe into two lazy frames: one for records with latitude
+    and longitude, and another for records without latitude and longitude.
+    Used to determine which records need to be appended using AIS.
+    """
+    has_geo = data.filter(
+        (~pl.col("geocode_lat").is_null()) & (~pl.col("geocode_lon").is_null())
+    )
+    needs_geo = data.filter(
+        (pl.col("geocode_lat").is_null()) | (pl.col("geocode_lon").is_null())
+    )
+
+    return (has_geo, needs_geo)
+
+
 def append_with_ais(
     config: dict, to_append: pl.LazyFrame, append_fields: list
 ) -> pl.LazyFrame:
@@ -123,8 +139,6 @@ def append_with_ais(
             *[pl.Field(field, pl.String) for field in append_fields],
         ]
     )
-
-    # new_cols.extend([pl.Field(field) for field in ais_append])
 
     API_KEY = config.get("AIS_API_KEY")
 
