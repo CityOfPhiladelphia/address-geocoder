@@ -2,7 +2,18 @@ import requests, polars as pl, time
 from retrying import retry
 
 class RateLimiter:
-    def __init__(self, rps):
+    """
+    A class to handle rate limiting of an API. Faster than
+    calling time.sleep() because it takes into account response
+    lag from the API.
+    
+    Example usage:
+    limiter = RateLimiter(10)
+
+    limiter.wait()
+    (api call)
+    """
+    def __init__(self, rps: int):
         self.rate = 1.0 / rps
         self._last_time = 0.0
 
