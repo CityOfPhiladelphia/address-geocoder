@@ -11,6 +11,9 @@ To download, use git:
 ```
 git clone git@github.com:CityOfPhiladelphia/address-geocoder.git
 ```
+If you have not set up authentication with git on your machine before, reference this [guidance on GitHub](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent).
+
+Alternatively, you can download the repository as a zip file using GitHub's web interface.
 
 Next, navigate to the project's directory and create a virtual environment:
 ```
