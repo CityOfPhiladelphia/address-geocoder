@@ -92,7 +92,7 @@ def ais_lookup(
             # cases where some fields (such as opa-owners) may be an
             # empty list
             if not field_value:
-                out_data[field] = ''
+                out_data[field] = None
             
             else:
                 out_data[field] = str(field_value)
