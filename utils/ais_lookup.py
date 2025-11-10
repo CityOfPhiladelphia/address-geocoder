@@ -86,7 +86,16 @@ def ais_lookup(
         out_data["geocode_lon"] = str(lon)
 
         for field in enrichment_fields:
-            out_data[field] = r_json.get("properties", "").get(field, "")
+            field_value = r_json.get("properties", "").get(field, "")
+
+            # Explicitly checking for existence of field value handles
+            # cases where some fields (such as opa-owners) may be an
+            # empty list
+            if not field_value:
+                out_data[field] = ''
+            
+            else:
+                out_data[field] = field_value
 
         return out_data
 
